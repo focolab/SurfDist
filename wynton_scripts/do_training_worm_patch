@@ -1,0 +1,19 @@
+#! /usr/bin/env bash
+#$ -S /bin/bash  # run job as a Bash shell [IMPORTANT]
+#$ -cwd          # run job in the current working directory
+
+# source ../../venvs/stardist/bin/activate
+# python3 ../experiments/worm/2_training.py
+# papermill ../experiments/worm/2_training.ipynb ../experiments/worm/2_training_output.ipynb
+# papermill ../experiments/baseline/worm/2_training.ipynb ../experiments/baseline/worm/2_training_output.ipynb
+
+N_RAYS=12
+while getopts "n:" arg; do
+  case $arg in
+    n) N_RAYS=$OPTARG;;
+  esac
+done
+
+UUID=$(uuidgen)
+
+apptainer exec --nv ../../containers/tensorflow.sif bash -c 'source ../../venvs/apptainer_stardist/bin/activate; papermill ../experiments/worm/2_training.ipynb ../experiments/worm/2_training_output_raydist_nodirs_'"$N_RAYS"'_rays_'"$UUID"'.ipynb -p n_rays '"$N_RAYS"' -p sge_gpu '"$SGE_GPU"' -p uuid '"$UUID"'; # papermill ../experiments/baseline/worm/2_training.ipynb ../experiments/baseline/worm/2_training_18_output.ipynb'

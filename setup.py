@@ -105,6 +105,12 @@ setup(
             extra_compile_args = ['-std=c++11'],
             include_dirs = get_numpy_include_dirs() + [qhull_root, nanoflann_root],
         ),
+        Extension(
+            'stardist.lib.patchdist',
+            sources = ['stardist/lib/patchdist.cpp', 'stardist/lib/patchdist_impl.cpp', 'stardist/lib/utils.cpp'] + qhull_src,
+            extra_compile_args = ['-std=c++11'],
+            include_dirs = get_numpy_include_dirs() + [qhull_root, nanoflann_root],
+        ),
     ],
 
     package_data={'stardist': [ 'kernels/*.cl', 'data/images/*' ]},
@@ -141,6 +147,7 @@ setup(
         'console_scripts': [
             'stardist-predict2d = stardist.scripts.predict2d:main',
             'stardist-predict3d = stardist.scripts.predict3d:main',
+            'stardist-predictpatch = stardist.scripts.predictpatch:main',
         ],
     }
 

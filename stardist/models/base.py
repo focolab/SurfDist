@@ -475,6 +475,11 @@ class StarDistBase(BaseModel):
 
             prob = create_empty_output(1)
             dist = create_empty_output(self.config.n_rays)
+            if self.__class__.__name__ == 'PatchDist':
+                if self.config.predict_dirs:
+                    dist = create_empty_output(self.config.n_rays + self.config.n_rays + self.config.n_rays + 2*self.config.n_faces + 2*self.config.n_edges + self.config.n_faces)
+                else:
+                    dist = create_empty_output(self.config.n_rays + 2*self.config.n_edges + self.config.n_faces)
             if self._is_multiclass():
                 prob_class = create_empty_output(self.config.n_classes+1)
                 result = (prob, dist, prob_class)
@@ -602,7 +607,13 @@ class StarDistBase(BaseModel):
 
 
         proba = np.asarray(proba)
-        dista = np.asarray(dista).reshape((-1,self.config.n_rays))
+        if type(self).__name__ == 'PatchDist':
+            if self.config.predict_dirs:
+                dista = np.asarray(dista).reshape((-1,3*self.config.n_rays+3*self.config.n_faces+2*self.config.n_edges))
+            else:
+                dista = np.asarray(dista).reshape((-1,self.config.n_rays+self.config.n_faces+2*self.config.n_edges))
+        else:
+            dista = np.asarray(dista).reshape((-1,self.config.n_rays))
         pointsa = np.asarray(pointsa).reshape((-1,self.config.n_dim))
 
         idx = resizer.filter_points(x.ndim, pointsa, axes_net)

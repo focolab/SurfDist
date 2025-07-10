@@ -2,6 +2,7 @@ from __future__ import absolute_import, print_function
 
 from .model2d import Config2D, StarDist2D, StarDistData2D
 from .model3d import Config3D, StarDist3D, StarDistData3D
+from .modelpatch import ConfigPatch, PatchDist, StarDistDataPatch
 
 from csbdeep.utils import backend_channels_last
 from csbdeep.utils.tf import keras_import
@@ -22,6 +23,7 @@ register_model(StarDist2D,   '2D_versatile_he',   'https://github.com/stardist/s
 register_model(StarDist2D,   '2D_paper_dsb2018',  'https://github.com/stardist/stardist-models/releases/download/v0.1/python_2D_paper_dsb2018.zip', '6287bf283f85c058ec3e7094b41039b5')
 register_model(StarDist2D,   '2D_demo',           'https://github.com/stardist/stardist-models/releases/download/v0.1/python_2D_demo.zip', '31f70402f58c50dd231ec31b4375ea2c')
 register_model(StarDist3D,   '3D_demo',           'https://github.com/stardist/stardist-models/releases/download/v0.1/python_3D_demo.zip', 'f481c16c1ee9f28a8dcfa1e7aae3dc83')
+register_model(PatchDist,   'patch_dist',           'https://github.com/stardist/stardist-models/releases/download/v0.1/python_3D_demo.zip', 'f481c16c1ee9f28a8dcfa1e7aae3dc83')
 
 register_aliases(StarDist2D, '2D_paper_dsb2018',  'DSB 2018 (from StarDist 2D paper)')
 register_aliases(StarDist2D, '2D_versatile_fluo', 'Versatile (fluorescent nuclei)')

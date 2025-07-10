@@ -243,7 +243,7 @@ def matching_dataset(y_true, y_pred, thresh=0.5, criterion='iou', by_image=False
 
 def matching_dataset_lazy(y_gen, thresh=0.5, criterion='iou', by_image=False, show_progress=True, parallel=False):
 
-    expected_keys = set(('fp', 'tp', 'fn', 'precision', 'recall', 'accuracy', 'f1', 'criterion', 'thresh', 'n_true', 'n_pred', 'mean_true_score', 'mean_matched_score', 'panoptic_quality'))
+    expected_keys = set(('fp', 'tp', 'fn', 'precision', 'recall', 'accuracy', 'f1', 'criterion', 'thresh', 'n_true', 'n_pred', 'mean_true_score', 'mean_matched_score', 'panoptic_quality', 'matched_pairs', 'matched_scores', 'matched_tps'))
 
     single_thresh = False
     if np.isscalar(thresh):
@@ -258,12 +258,12 @@ def matching_dataset_lazy(y_gen, thresh=0.5, criterion='iou', by_image=False, sh
     # compute matching stats for every pair of label images
     if parallel:
         from concurrent.futures import ThreadPoolExecutor
-        fn = lambda pair: matching(*pair, thresh=thresh, criterion=criterion, report_matches=False)
+        fn = lambda pair: matching(*pair, thresh=thresh, criterion=criterion, report_matches=True)
         with ThreadPoolExecutor() as pool:
             stats_all = tuple(pool.map(fn, tqdm(y_gen,**tqdm_kwargs)))
     else:
         stats_all = tuple (
-            matching(y_t, y_p, thresh=thresh, criterion=criterion, report_matches=False)
+            matching(y_t, y_p, thresh=thresh, criterion=criterion, report_matches=True)
             for y_t,y_p in tqdm(y_gen,**tqdm_kwargs)
         )
 
@@ -277,6 +277,8 @@ def matching_dataset_lazy(y_gen, thresh=0.5, criterion='iou', by_image=False, sh
                 if k == 'mean_true_score' and not bool(by_image):
                     # convert mean_true_score to "sum_matched_score"
                     acc[k] = acc.setdefault(k,0) + v * s.n_true
+                elif k == 'matched_scores' or k == 'matched_pairs' or k == 'matched_tps':
+                    acc[k] = v
                 else:
                     try:
                         acc[k] = acc.setdefault(k,0) + v
