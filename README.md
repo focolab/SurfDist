@@ -4,4 +4,4 @@ Bash scripts which were used for training on dataset [Worm](https://zenodo.org/r
 
 Code used for our spherical reconstruction experiment is available in the `experiments/sphere` directory.
 
-Our best (by mean segmentaiton metrics across validation images) trained models are available at {placeholder}.
+All trained models whose results we reported are available in the separate [SurfDist_Models](https://github.com/focolab/SurfDist_Models) repo.
