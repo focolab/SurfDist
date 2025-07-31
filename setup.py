@@ -83,7 +83,7 @@ setup(
     description='StarDist - Object Detection with Star-convex Shapes',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/stardist/stardist',
+    url='https://github.com/focolab/SurfDist',
     author='Uwe Schmidt, Martin Weigert',
     author_email='research@uweschmidt.org, martin.weigert@epfl.ch',
     license='BSD-3-Clause',
@@ -135,6 +135,8 @@ setup(
         'scikit-image',
         'numba',
         'imageio',
+        'numpy==1.24.4',
+        'tensorflow==2.15.0'
     ],
 
     extras_require={
