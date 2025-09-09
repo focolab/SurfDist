@@ -23,7 +23,7 @@ from ..sample_patches import sample_patches
 from ..utils import edt_prob, _normalize_grid, mask_to_categorical
 from ..matching import relabel_sequential
 from ..geometry import star_dist3D, polyhedron_to_label
-from ..rays3d import Rays_GoldenSpiral, rays_from_json
+from ..rays3d import Rays_GoldenSpiral, Rays_Patch, rays_from_json
 from ..nms import non_maximum_suppression_3d, non_maximum_suppression_3d_sparse
 
 
@@ -573,6 +573,12 @@ class StarDist3D(StarDistBase):
         if nms_thresh  is None: nms_thresh  = self.thresholds.nms
 
         rays = rays_from_json(self.config.rays_json)
+        rays_patch = Rays_Patch(rays_goldenspiral=rays)
+
+        point_normal = nms_kwargs.get('pn', False)
+        if point_normal:
+            rays_3d = rays
+            rays = rays_patch
 
         # sparse prediction
         if points is not None:
@@ -587,6 +593,9 @@ class StarDist3D(StarDistBase):
             if prob_class is not None:
                 inds = tuple(p//g for p,g in zip(points.T, self.config.grid))
                 prob_class = prob_class[inds]
+
+        if point_normal:
+            rays = rays_3d
 
         verbose = nms_kwargs.get('verbose',False)
         verbose and print("render polygons...")

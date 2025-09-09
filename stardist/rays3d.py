@@ -364,6 +364,11 @@ class Rays_GoldenSpiral(Rays_Base):
 
         # warnings.warn("ray definition has changed! Old results are invalid!")
 
+        if n == 6:
+            verts = np.array([
+                [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
+            ], dtype=float)
+
         # correct for anisotropy
         verts = verts/anisotropy
         #verts /= np.linalg.norm(verts, axis=-1, keepdims=True)
@@ -376,10 +381,10 @@ class Rays_GoldenSpiral(Rays_Base):
         return verts, faces
 
 class Rays_Patch(Rays_Base):
-    def __init__(self, n=70, anisotropy = None, subdivisions=None):
+    def __init__(self, n=70, anisotropy = None, subdivisions=None, rays_goldenspiral=None):
         if n<4:
             raise ValueError("At least 4 points have to be given!")
-        super().__init__(n=n, anisotropy = anisotropy if anisotropy is None else tuple(anisotropy), subdivisions=subdivisions)
+        super().__init__(n=n, anisotropy = anisotropy if anisotropy is None else tuple(anisotropy), subdivisions=subdivisions, rays_goldenspiral=rays_goldenspiral)
 
     def setup_other(self, faces, verts):
         edges = []
@@ -455,7 +460,12 @@ class Rays_Patch(Rays_Base):
                 if centroid_sign == normal_sign:
                     faces[face_index] = face[::-1]
             self.setup_other(faces, verts)
-
+        if self.kwargs.get('rays_goldenspiral') is not None:
+            rays_goldenspiral = self.kwargs.get('rays_goldenspiral')
+            n = len(rays_goldenspiral)
+            verts = rays_goldenspiral.vertices
+            faces = rays_goldenspiral.faces
+            self.setup_other(faces, verts)
 
         verts_voronai = SphericalVoronoi(verts)
         verts_voronai.sort_vertices_of_regions()

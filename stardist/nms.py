@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from time import time
 from .utils import _normalize_grid
-from .bezier_utils import dists_to_volume, bounding_radius_outer, icosahedron_bbox, render_icosahedron, pred_instance_to_control_points, pred_instances_to_control_points, pred_instance_to_control_points, subdivide_tris_tf_bary_one_shot
+from .bezier_utils import dists_to_volume, bounding_radius_outer, icosahedron_bbox, render_icosahedron, pred_instance_to_control_points, pred_instances_to_control_points, pred_instance_to_control_points, subdivide_tris_tf_bary_one_shot, dists_to_controls_tf
 from .rays3d import reorder_faces
 
 def _ind_prob_thresh(prob, prob_thresh, b=2):
@@ -233,7 +233,7 @@ def non_maximum_suppression_inds(dist, points, scores, thresh=0.5, use_bbox=True
 #########
 
 
-def non_maximum_suppression_3d(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0.5, prob_thresh=0.5, use_bbox=True, use_kdtree=True, verbose=False):
+def non_maximum_suppression_3d(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0.5, prob_thresh=0.5, use_bbox=True, use_kdtree=True, verbose=False, pn=False):
     """Non-Maximum-Supression of 3D polyhedra
 
     Retains only polyhedra whose overlap is smaller than nms_thresh
@@ -277,15 +277,20 @@ def non_maximum_suppression_3d(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0
     verbose and print("non-maximum suppression...")
     points = (points * np.array(grid).reshape((1,3)))
 
-    inds = non_maximum_suppression_3d_inds(disti, points, rays=rays, scores=probi, thresh=nms_thresh,
-                                           use_bbox=use_bbox, use_kdtree = use_kdtree,
-                                           verbose=verbose)
+    if pn:
+        inds = non_maximum_suppression_patch_inds(disti, points, rays=rays, scores=probi, thresh=nms_thresh,
+                                            use_bbox=use_bbox, use_kdtree = use_kdtree,
+                                            verbose=verbose)
+    else:
+        inds = non_maximum_suppression_3d_inds(disti, points, rays=rays, scores=probi, thresh=nms_thresh,
+                                            use_bbox=use_bbox, use_kdtree = use_kdtree,
+                                            verbose=verbose)
 
     verbose and print("keeping %s/%s polyhedra" % (np.count_nonzero(inds), len(inds)))
     return points[inds], probi[inds], disti[inds]
 
 
-def non_maximum_suppression_3d_sparse(dist, prob, points, rays, b=2, nms_thresh=0.5, use_kdtree = True, verbose=False):
+def non_maximum_suppression_3d_sparse(dist, prob, points, rays, b=2, nms_thresh=0.5, use_kdtree = True, verbose=False, pn=False):
     """Non-Maximum-Supression of 3D polyhedra from a list of dists, probs and points
 
     Retains only polyhedra whose overlap is smaller than nms_thresh
@@ -321,7 +326,10 @@ def non_maximum_suppression_3d_sparse(dist, prob, points, rays, b=2, nms_thresh=
 
     verbose and print("non-maximum suppression...")
 
-    inds = non_maximum_suppression_3d_inds(disti, pointsi, rays=rays, scores=probi, thresh=nms_thresh, use_kdtree = use_kdtree, verbose=verbose)
+    if pn:
+        inds = non_maximum_suppression_patch_inds(disti, pointsi, rays=rays, scores=probi, img_shape=dist.shape[:3], thresh=nms_thresh, use_kdtree = use_kdtree, verbose=verbose)
+    else:
+        inds = non_maximum_suppression_3d_inds(disti, pointsi, rays=rays, scores=probi, thresh=nms_thresh, use_kdtree = use_kdtree, verbose=verbose)
 
     verbose and print("keeping %s/%s polyhedra" % (np.count_nonzero(inds), len(inds)))
     return pointsi[inds], probi[inds], disti[inds], inds_original[inds]
@@ -517,7 +525,7 @@ def non_maximum_suppression_patch_inds(dist, points, rays, scores, img_shape, th
 
     assert dist.ndim == 2
     assert points.ndim == 2
-    assert dist.shape[1] == 3*len(rays)+3*len(rays.faces)+2*len(rays.edges) or dist.shape[1] == len(rays)+len(rays.faces)+2*len(rays.edges)
+    assert dist.shape[1] == 3*len(rays)+3*len(rays.faces)+2*len(rays.edges) or dist.shape[1] == len(rays)+len(rays.faces)+2*len(rays.edges) or dist.shape[1] == len(rays)
 
     n_poly = dist.shape[0]
 
@@ -543,29 +551,37 @@ def non_maximum_suppression_patch_inds(dist, points, rays, scores, img_shape, th
     print("initial 3d nms candidates:", survivors.size)
     start_time_3d = time()
     if dist.shape[0] != 0:
-        if dist.shape[1] == 3*len(rays)+3*len(rays.faces)+2*len(rays.edges):
-            split_indices = len(rays), 2*len(rays), 3*len(rays), 3*len(rays)+2*len(rays.faces)
-            dists, thetas, phis, b111_barys, other_control_dists = np.split(dist, indices_or_sections=split_indices, axis=-1)
-            cartesian_vertices = rays.voronai_vertices_to_unit_vertices_tf(thetas, phis).numpy()
-            max_dist = 0
-            max_theta = 0
-            max_phi = 0
-            for dist, theta, phi in zip(dists, thetas, phis):
-                if np.max(dist)>max_dist:
-                    max_dist=np.max(dist)
-                if np.max(theta)>max_theta:
-                    max_theta=np.max(theta)
-                if np.max(phi)>max_phi:
-                    max_phi=np.max(phi)
-            print("MAX dist",max_dist,"MAX theta",max_theta,"MAX phi",max_phi)
-        else:
-            split_indices = len(rays),
-            dists, other_control_dists = np.split(dist, indices_or_sections=split_indices, axis=-1)
+        if dist.shape[1] == len(rays):
+            dists = dist
+            control_points = dists_to_controls_tf(rays.vertices_tf, rays.faces_tf, dists, rays.vertextofacemap_tf, normals=None)
             cartesian_vertices = np.broadcast_to(rays.vertices, (np.prod(dists.shape[:-1]), len(rays), 3))
             cartesian_vertices = cartesian_vertices.reshape(tuple(dists.shape) + (3,))
             b111_barys = tf.constant(((np.nan,np.nan),), tf.float32)
+        else:
+            if dist.shape[1] == 3*len(rays)+3*len(rays.faces)+2*len(rays.edges):
+                split_indices = len(rays), 2*len(rays), 3*len(rays), 3*len(rays)+2*len(rays.faces)
+                dists, thetas, phis, b111_barys, other_control_dists = np.split(dist, indices_or_sections=split_indices, axis=-1)
+                cartesian_vertices = rays.voronai_vertices_to_unit_vertices_tf(thetas, phis).numpy()
+                max_dist = 0
+                max_theta = 0
+                max_phi = 0
+                for dist, theta, phi in zip(dists, thetas, phis):
+                    if np.max(dist)>max_dist:
+                        max_dist=np.max(dist)
+                    if np.max(theta)>max_theta:
+                        max_theta=np.max(theta)
+                    if np.max(phi)>max_phi:
+                        max_phi=np.max(phi)
+                print("MAX dist",max_dist,"MAX theta",max_theta,"MAX phi",max_phi)
+            else:
+                split_indices = len(rays),
+                dists, other_control_dists = np.split(dist, indices_or_sections=split_indices, axis=-1)
+                cartesian_vertices = np.broadcast_to(rays.vertices, (np.prod(dists.shape[:-1]), len(rays), 3))
+                cartesian_vertices = cartesian_vertices.reshape(tuple(dists.shape) + (3,))
+                b111_barys = tf.constant(((np.nan,np.nan),), tf.float32)
 
-        control_points = pred_instances_to_control_points(tf.constant(cartesian_vertices), tf.constant(dists), tf.constant(other_control_dists), b111_barys, rays.edges_tf, rays.faces_tf, rays.facetoedgemap_tf, rays.facetoedgesign_tf)
+            control_points = pred_instances_to_control_points(tf.constant(cartesian_vertices), tf.constant(dists), tf.constant(other_control_dists), b111_barys, rays.edges_tf, rays.faces_tf, rays.facetoedgemap_tf, rays.facetoedgesign_tf)
+
         addl_subdivided_vertices = subdivide_tris_tf_bary_one_shot(control_points, rays.cached_subdivision_output[4]['all_addl_bary_unsubbed_faces'], rays.cached_subdivision_output[4]['all_addl_bary_vertices']).numpy()
         addl_subdivided_vertex_dists = np.linalg.norm(addl_subdivided_vertices, axis=-1)
         addl_subdivided_vertex_dirs = addl_subdivided_vertices / addl_subdivided_vertex_dists[...,None]
