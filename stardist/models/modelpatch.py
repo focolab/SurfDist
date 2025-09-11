@@ -440,7 +440,10 @@ class StarDistDataPatch(StarDistDataBase):
         # TODO: support shape completion as in 2D?
 
         self.N = kwargs.pop("max_surface_points")
+        print("max surface points is", self.N)
         self.num_subdivisions = 2
+        if len(rays) == 6:
+            self.num_subdivisions = 3
         self.num_subdivided_vertices = rays.cached_subdivision_output[self.num_subdivisions]['vertextofacemap_tf'].shape[0]
 
         super().__init__(X=X, Y=Y, n_rays=len(rays), grid=grid,
