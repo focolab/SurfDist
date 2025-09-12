@@ -458,6 +458,12 @@ class Rays_Patch(Rays_Base):
                 verts = np.array([
                     [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
                 ], dtype=float)
+            elif n == 8:
+                m = np.sqrt(2) / 2
+                verts = np.array([
+                    [m, m, m], [m, m, -m], [m, -m, m], [m, -m, -m],
+                    [-m, m, m], [-m, m, -m], [-m, -m, m], [-m, -m, -m]
+                ], dtype=float)
             verts /= anisotropy
             hull = ConvexHull(verts)
             faces = np.array(reorder_faces(verts,hull.simplices))
