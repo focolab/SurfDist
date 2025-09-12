@@ -22,7 +22,7 @@ from .base import StarDistBase, StarDistDataBase, _tf_version_at_least
 from ..sample_patches import sample_patches
 from ..utils import edt_prob, _normalize_grid, mask_to_categorical
 from ..matching import relabel_sequential
-from ..geometry import star_dist3D, polyhedron_to_label
+from ..geometry import star_dist3D, polyhedron_to_label, mesh_to_label
 from ..rays3d import Rays_GoldenSpiral, Rays_Patch, rays_from_json
 from ..nms import non_maximum_suppression_3d, non_maximum_suppression_3d_sparse
 
@@ -573,10 +573,10 @@ class StarDist3D(StarDistBase):
         if nms_thresh  is None: nms_thresh  = self.thresholds.nms
 
         rays = rays_from_json(self.config.rays_json)
-        rays_patch = Rays_Patch(rays_goldenspiral=rays)
 
         point_normal = nms_kwargs.get('pn', False)
         if point_normal:
+            rays_patch = Rays_Patch(rays_goldenspiral=rays)
             rays_3d = rays
             rays = rays_patch
 
@@ -613,7 +613,10 @@ class StarDist3D(StarDistBase):
             rescale = (1,1,1)
 
         if return_labels:
-            labels = polyhedron_to_label(disti, points, rays=rays, prob=probi, shape=img_shape, overlap_label=overlap_label, verbose=verbose)
+            if point_normal:
+                labels = mesh_to_label(disti, points, rays=rays_patch, prob=probi, shape=img_shape, overlap_label=overlap_label, verbose=verbose)
+            else:
+                labels = polyhedron_to_label(disti, points, rays=rays, prob=probi, shape=img_shape, overlap_label=overlap_label, verbose=verbose)
 
             # map the overlap_label to something positive and back
             # (as relabel_sequential doesn't like negative values)

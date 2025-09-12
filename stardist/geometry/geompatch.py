@@ -11,7 +11,7 @@ from ..utils import path_absolute, _normalize_grid
 from ..matching import _check_label_array
 # from ..lib.stardist3d import c_star_dist3d, c_polyhedron_to_label, c_dist_to_volume, c_dist_to_centroid
 from ..lib.patchdist import c_star_dist3d, c_polyhedron_to_label
-from ..bezier_utils import icosahedron_bbox, render_icosahedron, pred_instances_to_control_points, subdivide_tris_tf_bary_one_shot
+from ..bezier_utils import icosahedron_bbox, render_icosahedron, pred_instances_to_control_points, subdivide_tris_tf_bary_one_shot, dists_to_controls_tf
 from ..rays3d import reorder_faces
 
 def _cpp_patch_dist(lbl, rays, grid=(1,1,1)):
@@ -149,7 +149,7 @@ def mesh_to_label(dist, points, rays, shape, prob=None, thr=-np.inf, labels=None
     if dist.ndim != 2:
         raise ValueError("dist should be 2 dimensional but has shape %s" % str(dist.shape))
 
-    if dist.shape[1] != 3*len(rays)+3*len(rays.faces)+2*len(rays.edges) and dist.shape[1] != len(rays)+len(rays.faces)+2*len(rays.edges):
+    if dist.shape[1] != 3*len(rays)+3*len(rays.faces)+2*len(rays.edges) and dist.shape[1] != len(rays)+len(rays.faces)+2*len(rays.edges) and dist.shape[1] != len(rays):
         raise ValueError("inconsistent number of rays!")
 
     if len(prob) != len(points):
@@ -186,17 +186,24 @@ def mesh_to_label(dist, points, rays, shape, prob=None, thr=-np.inf, labels=None
     def _prep(x, dtype):
         return np.ascontiguousarray(x.astype(dtype, copy=False))
 
-    if dist.shape[1] == 3*len(rays)+3*len(rays.faces)+2*len(rays.edges):
-        split_indices = len(rays), 2*len(rays), 3*len(rays), 3*len(rays)+2*len(rays.faces)
-        dists, thetas, phis, b111_barys, other_control_dists = np.split(dist, indices_or_sections=split_indices, axis=-1)
-        cartesian_vertices = rays.voronai_vertices_to_unit_vertices_tf(thetas, phis).numpy()
-    else:
-        split_indices = len(rays),
-        dists, other_control_dists = np.split(dist, indices_or_sections=split_indices, axis=-1)
+    if dist.shape[1] == len(rays):
+        dists = dist
+        control_points = dists_to_controls_tf(rays.vertices_tf, rays.faces_tf, dists, rays.vertextofacemap_tf, normals=None)
         cartesian_vertices = np.broadcast_to(rays.vertices, (np.prod(dists.shape[:-1]), len(rays), 3))
-        cartesian_vertices = cartesian_vertices.reshape(tuple(dists.shape[:-1]) + (len(rays), 3))
+        cartesian_vertices = cartesian_vertices.reshape(tuple(dists.shape) + (3,))
         b111_barys = tf.constant(((np.nan,np.nan),), tf.float32)
-    control_points = pred_instances_to_control_points(tf.constant(cartesian_vertices, dtype=tf.float32), tf.constant(dists, dtype=tf.float32), tf.constant(other_control_dists, dtype=tf.float32), b111_barys, rays.edges_tf, rays.faces_tf, rays.facetoedgemap_tf, rays.facetoedgesign_tf)
+    else:
+        if dist.shape[1] == 3*len(rays)+3*len(rays.faces)+2*len(rays.edges):
+            split_indices = len(rays), 2*len(rays), 3*len(rays), 3*len(rays)+2*len(rays.faces)
+            dists, thetas, phis, b111_barys, other_control_dists = np.split(dist, indices_or_sections=split_indices, axis=-1)
+            cartesian_vertices = rays.voronai_vertices_to_unit_vertices_tf(thetas, phis).numpy()
+        else:
+            split_indices = len(rays),
+            dists, other_control_dists = np.split(dist, indices_or_sections=split_indices, axis=-1)
+            cartesian_vertices = np.broadcast_to(rays.vertices, (np.prod(dists.shape[:-1]), len(rays), 3))
+            cartesian_vertices = cartesian_vertices.reshape(tuple(dists.shape[:-1]) + (len(rays), 3))
+            b111_barys = tf.constant(((np.nan,np.nan),), tf.float32)
+        control_points = pred_instances_to_control_points(tf.constant(cartesian_vertices, dtype=tf.float32), tf.constant(dists, dtype=tf.float32), tf.constant(other_control_dists, dtype=tf.float32), b111_barys, rays.edges_tf, rays.faces_tf, rays.facetoedgemap_tf, rays.facetoedgesign_tf)
     addl_subdivided_vertices = subdivide_tris_tf_bary_one_shot(control_points, rays.cached_subdivision_output[4]['all_addl_bary_unsubbed_faces'], rays.cached_subdivision_output[4]['all_addl_bary_vertices']).numpy()
     addl_subdivided_vertex_dists = np.linalg.norm(addl_subdivided_vertices, axis=-1)
     addl_subdivided_vertex_dirs = addl_subdivided_vertices / addl_subdivided_vertex_dists[...,None]
