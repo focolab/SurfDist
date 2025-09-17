@@ -278,7 +278,7 @@ def non_maximum_suppression_3d(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0
     points = (points * np.array(grid).reshape((1,3)))
 
     if pn:
-        inds = non_maximum_suppression_patch_inds(disti, points, rays=rays, scores=probi, thresh=nms_thresh,
+        inds = non_maximum_suppression_patch_inds(disti, points, rays=rays, scores=probi, img_shape=dist.shape[:3], thresh=nms_thresh,
                                             use_bbox=use_bbox, use_kdtree = use_kdtree,
                                             verbose=verbose)
     else:
