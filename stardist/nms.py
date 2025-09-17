@@ -233,7 +233,7 @@ def non_maximum_suppression_inds(dist, points, scores, thresh=0.5, use_bbox=True
 #########
 
 
-def non_maximum_suppression_3d(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0.5, prob_thresh=0.5, use_bbox=True, use_kdtree=True, verbose=False, pn=False):
+def non_maximum_suppression_3d(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0.5, prob_thresh=0.5, use_bbox=True, use_kdtree=True, verbose=False, pn=False, num_subdivisions=4):
     """Non-Maximum-Supression of 3D polyhedra
 
     Retains only polyhedra whose overlap is smaller than nms_thresh
@@ -280,7 +280,7 @@ def non_maximum_suppression_3d(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0
     if pn:
         inds = non_maximum_suppression_patch_inds(disti, points, rays=rays, scores=probi, img_shape=dist.shape[:3], thresh=nms_thresh,
                                             use_bbox=use_bbox, use_kdtree = use_kdtree,
-                                            verbose=verbose)
+                                            verbose=verbose, num_subdivisions=num_subdivisions)
     else:
         inds = non_maximum_suppression_3d_inds(disti, points, rays=rays, scores=probi, thresh=nms_thresh,
                                             use_bbox=use_bbox, use_kdtree = use_kdtree,
@@ -290,7 +290,7 @@ def non_maximum_suppression_3d(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0
     return points[inds], probi[inds], disti[inds]
 
 
-def non_maximum_suppression_3d_sparse(dist, prob, points, rays, b=2, nms_thresh=0.5, use_kdtree = True, verbose=False, pn=False):
+def non_maximum_suppression_3d_sparse(dist, prob, points, rays, b=2, nms_thresh=0.5, use_kdtree = True, verbose=False, pn=False, num_subdivisions=4):
     """Non-Maximum-Supression of 3D polyhedra from a list of dists, probs and points
 
     Retains only polyhedra whose overlap is smaller than nms_thresh
@@ -327,7 +327,7 @@ def non_maximum_suppression_3d_sparse(dist, prob, points, rays, b=2, nms_thresh=
     verbose and print("non-maximum suppression...")
 
     if pn:
-        inds = non_maximum_suppression_patch_inds(disti, pointsi, rays=rays, scores=probi, img_shape=dist.shape[:3], thresh=nms_thresh, use_kdtree = use_kdtree, verbose=verbose)
+        inds = non_maximum_suppression_patch_inds(disti, pointsi, rays=rays, scores=probi, img_shape=dist.shape[:3], thresh=nms_thresh, use_kdtree = use_kdtree, verbose=verbose, num_subdivisions=num_subdivisions)
     else:
         inds = non_maximum_suppression_3d_inds(disti, pointsi, rays=rays, scores=probi, thresh=nms_thresh, use_kdtree = use_kdtree, verbose=verbose)
 
@@ -394,7 +394,7 @@ def non_maximum_suppression_3d_inds(dist, points, rays, scores, thresh=0.5, use_
 
     return survivors
 
-def non_maximum_suppression_patch(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0.5, prob_thresh=0.5, use_bbox=True, use_kdtree=True, verbose=False, return_meshes=False):
+def non_maximum_suppression_patch(dist, prob, rays, grid=(1,1,1), b=2, nms_thresh=0.5, prob_thresh=0.5, use_bbox=True, use_kdtree=True, verbose=False, return_meshes=False, num_subdivisions=4):
     """Non-Maximum-Supression of 3D polyhedra
 
     Retains only polyhedra whose overlap is smaller than nms_thresh
@@ -441,7 +441,7 @@ def non_maximum_suppression_patch(dist, prob, rays, grid=(1,1,1), b=2, nms_thres
 
     nms_result = non_maximum_suppression_patch_inds(disti, points, rays=rays, scores=probi, img_shape=dist.shape[:3], thresh=nms_thresh,
                                            use_bbox=use_bbox, use_kdtree = use_kdtree,
-                                           verbose=verbose, return_meshes=return_meshes)
+                                           verbose=verbose, return_meshes=return_meshes, num_subdivisions=num_subdivisions)
     if return_meshes:
         inds, meshes = nms_result
     else:
@@ -454,7 +454,7 @@ def non_maximum_suppression_patch(dist, prob, rays, grid=(1,1,1), b=2, nms_thres
         return points[inds], probi[inds], disti[inds]
 
 
-def non_maximum_suppression_patch_sparse(dist, prob, points, rays, img_shape, b=2, nms_thresh=0.5, use_kdtree = True, verbose=False, return_meshes=False):
+def non_maximum_suppression_patch_sparse(dist, prob, points, rays, img_shape, b=2, nms_thresh=0.5, use_kdtree = True, verbose=False, return_meshes=False, num_subdivisions=4):
     """Non-Maximum-Supression of 3D polyhedra from a list of dists, probs and points
 
     Retains only polyhedra whose overlap is smaller than nms_thresh
@@ -492,7 +492,7 @@ def non_maximum_suppression_patch_sparse(dist, prob, points, rays, img_shape, b=
     inds_original = inds_original[_sorted]
 
     verbose and print("non-maximum suppression...")
-    nms_result = non_maximum_suppression_patch_inds(disti, pointsi, rays=rays, scores=probi, img_shape=img_shape, thresh=nms_thresh, use_kdtree = use_kdtree, verbose=verbose, return_meshes=return_meshes)
+    nms_result = non_maximum_suppression_patch_inds(disti, pointsi, rays=rays, scores=probi, img_shape=img_shape, thresh=nms_thresh, use_kdtree = use_kdtree, verbose=verbose, return_meshes=return_meshes, num_subdivisions=num_subdivisions)
     if return_meshes:
         inds, meshes = nms_result
     else:
@@ -504,7 +504,7 @@ def non_maximum_suppression_patch_sparse(dist, prob, points, rays, img_shape, b=
     else:
         return pointsi[inds], probi[inds], disti[inds], inds_original[inds]
 
-def non_maximum_suppression_patch_inds(dist, points, rays, scores, img_shape, thresh=0.5, use_bbox=True, use_kdtree = True, verbose=1, return_meshes=False):
+def non_maximum_suppression_patch_inds(dist, points, rays, scores, img_shape, thresh=0.5, use_bbox=True, use_kdtree = True, verbose=1, return_meshes=False, num_subdivisions=4):
     """
     Applies non maximum supression to ray-convex polyhedra given by dists and rays
     sorted by scores and IoU threshold
@@ -582,12 +582,12 @@ def non_maximum_suppression_patch_inds(dist, points, rays, scores, img_shape, th
 
             control_points = pred_instances_to_control_points(tf.constant(cartesian_vertices), tf.constant(dists), tf.constant(other_control_dists), b111_barys, rays.edges_tf, rays.faces_tf, rays.facetoedgemap_tf, rays.facetoedgesign_tf)
 
-        addl_subdivided_vertices = subdivide_tris_tf_bary_one_shot(control_points, rays.cached_subdivision_output[4]['all_addl_bary_unsubbed_faces'], rays.cached_subdivision_output[4]['all_addl_bary_vertices']).numpy()
+        addl_subdivided_vertices = subdivide_tris_tf_bary_one_shot(control_points, rays.cached_subdivision_output[num_subdivisions]['all_addl_bary_unsubbed_faces'], rays.cached_subdivision_output[num_subdivisions]['all_addl_bary_vertices']).numpy()
         addl_subdivided_vertex_dists = np.linalg.norm(addl_subdivided_vertices, axis=-1)
         addl_subdivided_vertex_dirs = addl_subdivided_vertices / addl_subdivided_vertex_dists[...,None]
         cartesian_vertices = np.concatenate((cartesian_vertices, addl_subdivided_vertex_dirs), axis=-2)
         dists = np.concatenate((dists, addl_subdivided_vertex_dists), axis=-1)
-        subdivided_faces = rays.cached_subdivision_output[4]['faces_tf'].numpy().astype(np.int64)
+        subdivided_faces = rays.cached_subdivision_output[num_subdivisions]['faces_tf'].numpy().astype(np.int64)
         subdivided_faces = np.array(reorder_faces(cartesian_vertices[0],subdivided_faces))
 
         survivors[ind] = c_non_max_suppression_inds(_prep(dists, np.float32),
@@ -604,8 +604,8 @@ def non_maximum_suppression_patch_inds(dist, points, rays, scores, img_shape, th
     if verbose:
         print("NMS took %.4f s" % (time() - t))
     if return_meshes:
-        subdivided_facetoedgemap = rays.cached_subdivision_output[4]['facetoedgemap_tf'].numpy()
-        subdivided_edges = rays.cached_subdivision_output[4]['edges_tf'].numpy()
+        subdivided_facetoedgemap = rays.cached_subdivision_output[num_subdivisions]['facetoedgemap_tf'].numpy()
+        subdivided_edges = rays.cached_subdivision_output[num_subdivisions]['edges_tf'].numpy()
         icosa_meshes = np.take(cartesian_vertices * dists[...,None], subdivided_edges, axis=-2)
         icosa_meshes += points[:,None,None,:]
         return survivors, icosa_meshes[survivors]

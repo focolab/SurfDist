@@ -98,7 +98,7 @@ def patch_dist(lbl, rays, grid=(1,1,1), mode='cpp'):
         _raise(ValueError("Unknown mode %s" % mode))
 
 
-def mesh_to_label(dist, points, rays, shape, prob=None, thr=-np.inf, labels=None, mode="full", verbose=True, overlap_label=None):
+def mesh_to_label(dist, points, rays, shape, prob=None, thr=-np.inf, labels=None, mode="full", verbose=True, overlap_label=None, num_subdivisions=4):
     """
     creates labeled image from stardist representations
 
@@ -204,12 +204,12 @@ def mesh_to_label(dist, points, rays, shape, prob=None, thr=-np.inf, labels=None
             cartesian_vertices = cartesian_vertices.reshape(tuple(dists.shape[:-1]) + (len(rays), 3))
             b111_barys = tf.constant(((np.nan,np.nan),), tf.float32)
         control_points = pred_instances_to_control_points(tf.constant(cartesian_vertices, dtype=tf.float32), tf.constant(dists, dtype=tf.float32), tf.constant(other_control_dists, dtype=tf.float32), b111_barys, rays.edges_tf, rays.faces_tf, rays.facetoedgemap_tf, rays.facetoedgesign_tf)
-    addl_subdivided_vertices = subdivide_tris_tf_bary_one_shot(control_points, rays.cached_subdivision_output[4]['all_addl_bary_unsubbed_faces'], rays.cached_subdivision_output[4]['all_addl_bary_vertices']).numpy()
+    addl_subdivided_vertices = subdivide_tris_tf_bary_one_shot(control_points, rays.cached_subdivision_output[num_subdivisions]['all_addl_bary_unsubbed_faces'], rays.cached_subdivision_output[num_subdivisions]['all_addl_bary_vertices']).numpy()
     addl_subdivided_vertex_dists = np.linalg.norm(addl_subdivided_vertices, axis=-1)
     addl_subdivided_vertex_dirs = addl_subdivided_vertices / addl_subdivided_vertex_dists[...,None]
     cartesian_vertices = np.concatenate((cartesian_vertices, addl_subdivided_vertex_dirs), axis=-2)
     dists = np.concatenate((dists, addl_subdivided_vertex_dists), axis=-1)
-    subdivided_faces = rays.cached_subdivision_output[4]['faces_tf'].numpy().astype(np.int64)
+    subdivided_faces = rays.cached_subdivision_output[num_subdivisions]['faces_tf'].numpy().astype(np.int64)
     subdivided_faces = np.array(reorder_faces(cartesian_vertices[0],subdivided_faces))
 
     labeled = c_polyhedron_to_label(_prep(dists, np.float32),
@@ -252,7 +252,8 @@ def relabel_image_patchdist(lbl, dist, rays, verbose=False, **kwargs):
     #     dist_pred = dists_pred
     # cartesian_vertices = cartesian_vertex_directions*dist_pred[:,None]
 
-    lbl_new = mesh_to_label(dist, points, rays, shape=lbl.shape, labels=labs, verbose=verbose)
+    num_subdivisions = kwargs.get('num_subdivisions', 4)
+    lbl_new = mesh_to_label(dist, points, rays, shape=lbl.shape, labels=labs, verbose=verbose, num_subdivisions=num_subdivisions)
     return lbl_new
 
 

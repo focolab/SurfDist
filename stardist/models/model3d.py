@@ -614,7 +614,8 @@ class StarDist3D(StarDistBase):
 
         if return_labels:
             if point_normal:
-                labels = mesh_to_label(disti, points, rays=rays_patch, prob=probi, shape=img_shape, overlap_label=overlap_label, verbose=verbose)
+                num_subdivisions = nms_kwargs.get('num_subdivisions', 4)
+                labels = mesh_to_label(disti, points, rays=rays_patch, prob=probi, shape=img_shape, overlap_label=overlap_label, verbose=verbose, num_subdivisions=num_subdivisions)
             else:
                 labels = polyhedron_to_label(disti, points, rays=rays, prob=probi, shape=img_shape, overlap_label=overlap_label, verbose=verbose)
 

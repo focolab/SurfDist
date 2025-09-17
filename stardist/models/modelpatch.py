@@ -1332,7 +1332,8 @@ class PatchDist(StarDistBase):
             rescale = (1,1,1)
 
         if return_labels:
-            labels = mesh_to_label(disti, points, rays=rays, prob=probi, shape=img_shape, overlap_label=overlap_label, verbose=verbose)
+            num_subdivisions = nms_kwargs.get('num_subdivisions', 4)
+            labels = mesh_to_label(disti, points, rays=rays, prob=probi, shape=img_shape, overlap_label=overlap_label, verbose=verbose, num_subdivisions=num_subdivisions)
 
             # map the overlap_label to something positive and back
             # (as relabel_sequential doesn't like negative values)
