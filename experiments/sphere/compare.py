@@ -11,6 +11,7 @@ import napari
 import seaborn as sns
 
 sns.set_theme()
+sns.set(font_scale=3)
 
 ray_counts = [6, 12, 24, 48, 96]
 radii = [5, 10, 25, 50, 75]
